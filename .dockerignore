@@ -1,0 +1,7 @@
+.git
+.env
+bin
+tmp
+slopyard
+*.log
+.DS_Store

@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} | AI Slop Detector</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <main class="page page-narrow">
+    <nav class="topbar">
+      <a href="/">AI Slop Detector</a>
+    </nav>
+
+    {{if .Error}}<p class="notice error">{{.Error}}</p>{{end}}
+    {{if .Flash}}<p class="notice success">{{.Flash}}</p>{{end}}
+
+    <section class="site-header">
+      <p class="eyebrow">Website record</p>
+      <h1>{{.Data.Site.Host}}</h1>
+    </section>
+
+    <section class="count-grid" aria-label="Report counts">
+      <div class="count count-slop">
+        <strong>{{.Data.Site.SlopCount}}</strong>
+        <span>Slop</span>
+      </div>
+      <div class="count count-clean">
+        <strong>{{.Data.Site.NotSlopCount}}</strong>
+        <span>Not slop</span>
+      </div>
+    </section>
+
+    <section class="ratio">
+      <div class="bar" aria-label="Sentiment ratio">
+        <span class="bar-slop" style="width: {{.Data.Site.SlopPercent}}%"></span>
+      </div>
+      <div class="bar-labels">
+        <span>{{.Data.Site.TotalReports}} total reports</span>
+        <span>{{.Data.Site.SlopPercent}}% slop</span>
+      </div>
+    </section>
+
+    <section class="report-panel">
+      <h2>Submit a report</h2>
+      <form class="report-form" action="/report" method="post">
+        <input type="hidden" name="input" value="{{.Data.Site.Host}}">
+
+        <fieldset>
+          <legend>Sentiment</legend>
+          <label class="choice"><input type="radio" name="type" value="SLOP" required> AI Slop</label>
+          <label class="choice"><input type="radio" name="type" value="NOT_SLOP" required> Not Slop</label>
+        </fieldset>
+
+        <label for="category">Category</label>
+        <select id="category" name="category">
+          <option value="">No category</option>
+          <option value="SEO_SPAM">SEO spam</option>
+          <option value="LOW_EFFORT">Low effort</option>
+          <option value="CONTENT_FARM">Content farm</option>
+          <option value="FAKE_REVIEWS">Fake reviews</option>
+          <option value="MISINFO">Misinformation</option>
+          <option value="USEFUL_AI">Useful AI</option>
+          <option value="HUMAN_AUTHORED">Human-authored</option>
+          <option value="CLEAR_DISCLOSURE">Clear disclosure</option>
+        </select>
+
+        <label for="notes">Private note</label>
+        <textarea id="notes" name="notes" rows="3" placeholder="Optional. Stored for future moderation, not shown publicly."></textarea>
+
+        <button type="submit">Submit report</button>
+      </form>
+    </section>
+
+    <section class="columns">
+      <div>
+        <h2>Recent activity</h2>
+        {{if .Data.RecentReports}}
+          <ol class="report-list">
+            {{range .Data.RecentReports}}
+              <li>
+                <span>{{reportLabel .Type}}</span>
+                {{if .Category}}<span>{{categoryLabel .Category}}</span>{{end}}
+                <time>{{formatTime .CreatedAt}}</time>
+              </li>
+            {{end}}
+          </ol>
+        {{else}}
+          <p class="empty">No reports yet.</p>
+        {{end}}
+      </div>
+
+      <div>
+        <h2>Categories</h2>
+        {{if .Data.CategoryBreakdown}}
+          <ol class="report-list">
+            {{range .Data.CategoryBreakdown}}
+              <li>
+                <span>{{categoryLabel .Category}}</span>
+                <span>{{.Count}}</span>
+              </li>
+            {{end}}
+          </ol>
+        {{else}}
+          <p class="empty">No categories reported yet.</p>
+        {{end}}
+      </div>
+    </section>
+  </main>
+</body>
+</html>

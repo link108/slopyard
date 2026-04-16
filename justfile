@@ -1,5 +1,5 @@
 set dotenv-load := true
-set shell := ["zsh", "-cu"]
+set shell := ["sh", "-eu", "-c"]
 
 app := "slopyard"
 image := "slopyard:local"
@@ -33,7 +33,7 @@ dev: db-setup
 
 docker-run: docker-build
     -docker rm -f {{app}}
-    docker run -d --name {{app}} --env-file .env -e DATABASE_URL="${DOCKER_DATABASE_URL:-${DATABASE_URL/localhost/host.docker.internal}}" -e REDIS_URL="${DOCKER_REDIS_URL:-${REDIS_URL/localhost/host.docker.internal}}" -p 8080:8080 --add-host=host.docker.internal:host-gateway {{image}}
+    docker run -d --name {{app}} --env-file .env -e DATABASE_URL="$${DOCKER_DATABASE_URL:-$$(printf '%s' "$$DATABASE_URL" | sed 's/localhost/host.docker.internal/')}" -e REDIS_URL="$${DOCKER_REDIS_URL:-$$(printf '%s' "$$REDIS_URL" | sed 's/localhost/host.docker.internal/')}" -p 8080:8080 --add-host=host.docker.internal:host-gateway {{image}}
 
 docker-stop:
     -docker stop {{app}}

@@ -65,6 +65,8 @@ func (s *Server) Routes() http.Handler {
 
 	r.Handle("/static/*", http.StripPrefix("/static/", http.FileServer(http.Dir("web/static"))))
 	r.Get("/", s.home)
+	r.Get("/top-slops", s.topSlops)
+	r.Get("/faqs", s.faqs)
 	r.Post("/report", s.submitReport)
 	r.Get("/lookup", s.lookup)
 	r.Get("/site/{host}", s.site)
@@ -81,17 +83,29 @@ type pageData struct {
 }
 
 func (s *Server) home(w http.ResponseWriter, r *http.Request) {
-	data, err := s.store.HomeData(r.Context())
-	if err != nil {
-		s.renderError(w, r, http.StatusInternalServerError, "Could not load recent reports.")
-		s.logger.Error("load home", "err", err)
-		return
-	}
 	s.render(w, r, http.StatusOK, "home.html", pageData{
 		Title: "AI Slop Detector",
 		Error: r.URL.Query().Get("error"),
 		Flash: r.URL.Query().Get("flash"),
+	})
+}
+
+func (s *Server) topSlops(w http.ResponseWriter, r *http.Request) {
+	data, err := s.store.HomeData(r.Context())
+	if err != nil {
+		s.renderError(w, r, http.StatusInternalServerError, "Could not load top slops.")
+		s.logger.Error("load top slops", "err", err)
+		return
+	}
+	s.render(w, r, http.StatusOK, "top_slops.html", pageData{
+		Title: "Top Slops",
 		Data:  data,
+	})
+}
+
+func (s *Server) faqs(w http.ResponseWriter, r *http.Request) {
+	s.render(w, r, http.StatusOK, "faqs.html", pageData{
+		Title: "FAQs",
 	})
 }
 

@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{.Title}} | AI Slop Detector</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <main class="page page-narrow">
+    <nav class="topbar">
+      <a href="/">AI Slop Detector</a>
+      <a href="/faqs">FAQs</a>
+    </nav>
+
+    <section class="site-header">
+      <p class="eyebrow">Community reports, not verdicts</p>
+      <h1>Top Slops</h1>
+    </section>
+
+    <section class="content-section">
+      {{if .Data.Trending7d}}
+        <ol class="report-list">
+          {{range .Data.Trending7d}}
+            <li>
+              <a href="{{sitePath .Host}}">{{.Host}}</a>
+              <span>{{.SlopCount}} slop</span>
+              <span>{{.NotSlopCount}} not slop</span>
+            </li>
+          {{end}}
+        </ol>
+      {{else}}
+        <p class="empty">No reports yet.</p>
+      {{end}}
+    </section>
+  </main>
+</body>
+</html>

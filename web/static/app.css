@@ -52,7 +52,8 @@ a {
   justify-content: flex-start;
 }
 
-.tabs a {
+.tabs a,
+.topbar a {
   padding: 8px 12px;
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -60,7 +61,9 @@ a {
 }
 
 .tabs a:hover,
-.tabs a:focus {
+.tabs a:focus,
+.topbar a:hover,
+.topbar a:focus {
   border-color: var(--ink);
 }
 

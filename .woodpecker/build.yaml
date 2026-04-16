@@ -1,0 +1,101 @@
+clone:
+  git:
+    image: woodpeckerci/plugin-git
+    settings:
+      token:
+        from_secret: github_token
+
+when:
+  branch: main
+  event: [push, pull_request]
+
+steps:
+  - name: typecheck
+    image: golang:1.24-alpine
+    commands:
+      - apk add --no-cache just
+      - just typecheck
+
+  - name: lint
+    image: golang:1.24-alpine
+    commands:
+      - apk add --no-cache just
+      - just lint
+
+  - name: test
+    image: golang:1.24-alpine
+    commands:
+      - apk add --no-cache just
+      - just test
+
+  - name: build
+    image: golang:1.24-alpine
+    commands:
+      - apk add --no-cache just
+      - just build
+
+  - name: docker-build-push
+    image: woodpeckerci/plugin-docker-buildx
+    when:
+      event: push
+    settings:
+      repo: link108/slopyard
+      tags:
+        - ${CI_COMMIT_SHA:0:7}
+        - latest
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+
+  - name: deploy-to-homelab
+    image: alpine:3.21
+    when:
+      event: push
+    environment:
+      GITHUB_TOKEN:
+        from_secret: github_token
+    commands:
+      - apk add --no-cache git yq github-cli
+      - SHORT_SHA=$(echo $CI_COMMIT_SHA | cut -c1-7)
+      - "git clone https://x-access-token:$GITHUB_TOKEN@github.com/link108/homelab.git /tmp/homelab"
+      - cd /tmp/homelab
+      - "git config user.email woodpecker@ci.byah.org"
+      - "git config user.name Woodpecker CI"
+      - git checkout -b deploy/slopyard-$SHORT_SHA
+      - ./scripts/request-deploy.sh slopyard $SHORT_SHA
+      - git add -A
+      - 'git commit -m "deploy(slopyard): $SHORT_SHA"'
+      - git push -u origin deploy/slopyard-$SHORT_SHA
+      - 'gh pr create --repo link108/homelab --title "deploy(slopyard): $SHORT_SHA" --body "Auto-deploy from slopyard CI pipeline" --head deploy/slopyard-$SHORT_SHA'
+
+  - name: auto-merge
+    image: alpine:3.21
+    when:
+      event: pull_request
+    environment:
+      GITHUB_TOKEN:
+        from_secret: github_token
+    commands:
+      - apk add --no-cache github-cli jq
+      - |
+        PR_DATA=$(gh pr view $CI_COMMIT_PULL_REQUEST --repo $CI_REPO --json isDraft,labels)
+        IS_DRAFT=$(echo "$PR_DATA" | jq -r '.isDraft')
+        HAS_LABEL=$(echo "$PR_DATA" | jq -r '.labels[]?.name // empty' | grep -q "automerge" && echo "true" || echo "false")
+
+        if [ "$IS_DRAFT" = "true" ]; then
+          echo "Skipping auto-merge: PR is a draft"
+          exit 0
+        fi
+
+        if [ "$HAS_LABEL" != "true" ]; then
+          echo "Skipping auto-merge: PR missing 'automerge' label"
+          exit 0
+        fi
+
+        echo "Auto-merging PR #$CI_COMMIT_PULL_REQUEST"
+        gh pr merge $CI_COMMIT_PULL_REQUEST \
+          --repo $CI_REPO \
+          --squash \
+          --delete-branch \
+          --match-head-commit $CI_COMMIT_SHA

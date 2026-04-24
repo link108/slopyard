@@ -263,11 +263,11 @@ func (p *Postgres) trendingSince(ctx context.Context, since time.Time, limit int
 			s.total_reports, s.slop_count, s.not_slop_count, s.created_at, s.updated_at
 		from sites s
 		join reports r on r.site_id = s.id
-		where s.hidden_at is null and r.removed_at is null and r.created_at >= $1
+		where s.hidden_at is null and r.removed_at is null
 		group by s.id
 		order by count(r.id) desc, s.last_reported_at desc
-		limit $2
-	`, since, limit)
+		limit $1
+	`, limit)
 	if err != nil {
 		return nil, err
 	}

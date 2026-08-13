@@ -1,0 +1,74 @@
+# Isolated development environment for THIS workspace only (one Dev
+# Container checkout / git worktree = one Compose project = its own
+# Postgres/Redis, entirely separate from any other checkout of this
+# repo). The Dev Container CLI names the Compose project after the
+# workspace folder's own directory name, so distinct worktree directory
+# names is all isolation requires - no extra workspace-ID bookkeeping
+# needed here.
+#
+# Credentials: generated once per workspace by .devcontainer/generate-secrets.sh
+# (runs on the host before this file is ever read - see devcontainer.json's
+# initializeCommand) and delivered as Compose secrets, never as plain env
+# vars. No host ports are published - only other services in this Compose
+# project (i.e. the `app` service) can reach postgres/redis, over the
+# project's private network, by service name.
+
+services:
+  app:
+    image: link108/devcontainer-base:1
+    volumes:
+      - .:/workspaces/slopyard:cached
+    command: sleep infinity
+    secrets:
+      - postgres_user
+      - postgres_password
+      - redis_password
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER_FILE: /run/secrets/postgres_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+      POSTGRES_DB: slopyard
+    secrets:
+      - postgres_user
+      - postgres_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$(cat /run/secrets/postgres_user)\" -d slopyard"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  redis:
+    image: redis:7-alpine
+    secrets:
+      - redis_password
+    command: ["sh", "-c", "redis-server --requirepass \"$(cat /run/secrets/redis_password)\""]
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$(cat /run/secrets/redis_password)\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  postgres_data:
+  redis_data:
+
+secrets:
+  postgres_user:
+    file: ./.devcontainer/secrets/postgres_user
+  postgres_password:
+    file: ./.devcontainer/secrets/postgres_password
+  redis_password:
+    file: ./.devcontainer/secrets/redis_password

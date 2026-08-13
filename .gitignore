@@ -1,6 +1,11 @@
 .env
+.env.local
 bin/
 tmp/
 /slopyard
 *.log
 .DS_Store
+
+# Generated per-workspace PostgreSQL/Redis credentials (.devcontainer/generate-secrets.sh).
+# Never committed - regenerated automatically on first `devcontainer up`.
+.devcontainer/secrets/

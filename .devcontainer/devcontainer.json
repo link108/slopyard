@@ -1,0 +1,10 @@
+{
+  "name": "slopyard",
+  "initializeCommand": "bash ${localWorkspaceFolder}/.devcontainer/generate-secrets.sh",
+  "dockerComposeFile": ["../compose.dev.yml"],
+  "service": "app",
+  "workspaceFolder": "/workspaces/slopyard",
+  "remoteUser": "vscode",
+  "postCreateCommand": "git config --global --add safe.directory ${containerWorkspaceFolder} && mise install",
+  "forwardPorts": [8080]
+}

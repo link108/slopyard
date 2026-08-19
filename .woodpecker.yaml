@@ -62,9 +62,7 @@ steps:
         from_secret: github_token
     commands:
       - apk add --no-cache git yq github-cli
-      - git clone --depth=1 https://x-access-token:$GITHUB_TOKEN@github.com/link108/slopyard.git /tmp/slopyard
-      - cd /tmp/slopyard
-      - SHORT_SHA=$(git rev-parse --short HEAD)
+      - SHORT_SHA=$(echo $CI_COMMIT_SHA | cut -c1-7)
       - git clone https://x-access-token:$GITHUB_TOKEN@github.com/link108/homelab.git /tmp/homelab
       - cd /tmp/homelab
       - git config user.email "ci@byah.org"

@@ -1,0 +1,77 @@
+clone:
+  git:
+    image: woodpeckerci/plugin-git
+    settings:
+      token:
+        from_secret: github_token
+
+when:
+  branch: main
+  event: [push, pull_request]
+
+# Build on the homelab agent, not the Hetzner cluster's own agent - see
+# link108/deckforge's .woodpecker.yaml for why.
+labels:
+  host: homelab
+
+steps:
+  - name: typecheck
+    image: golang:1.24-alpine
+    commands:
+      - apk add --no-cache just
+      - just typecheck
+
+  - name: lint
+    image: golang:1.24-alpine
+    commands:
+      - apk add --no-cache just
+      - just lint
+
+  - name: test
+    image: golang:1.24-alpine
+    commands:
+      - apk add --no-cache just
+      - just test
+
+  - name: build
+    image: golang:1.24-alpine
+    commands:
+      - apk add --no-cache just
+      - just build
+
+  - name: docker-build
+    image: woodpeckerci/plugin-docker-buildx
+    when:
+      event: push
+    settings:
+      repo: link108/slopyard
+      tags:
+        - ${CI_COMMIT_SHA:0:7}
+        - latest
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+
+  - name: request-deploy
+    image: alpine:3.19
+    when:
+      event: push
+    environment:
+      GITHUB_TOKEN:
+        from_secret: github_token
+    commands:
+      - apk add --no-cache git yq github-cli
+      - git clone --depth=1 https://x-access-token:$GITHUB_TOKEN@github.com/link108/slopyard.git /tmp/slopyard
+      - cd /tmp/slopyard
+      - SHORT_SHA=$(git rev-parse --short HEAD)
+      - git clone https://x-access-token:$GITHUB_TOKEN@github.com/link108/homelab.git /tmp/homelab
+      - cd /tmp/homelab
+      - git config user.email "ci@byah.org"
+      - git config user.name "Woodpecker CI (slopyard)"
+      - git checkout -b "deploy/slopyard-$SHORT_SHA"
+      - ./scripts/request-deploy.sh slopyard "$SHORT_SHA"
+      - git add -A
+      - git commit -m "deploy(slopyard):$SHORT_SHA"
+      - git push -u origin "deploy/slopyard-$SHORT_SHA"
+      - gh pr create --repo link108/homelab --title "deploy(slopyard):$SHORT_SHA" --body "Auto-deploy from slopyard Woodpecker CI" --head "deploy/slopyard-$SHORT_SHA"

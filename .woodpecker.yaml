@@ -46,7 +46,10 @@ steps:
     settings:
       repo: link108/slopyard
       tags:
-        - ${CI_COMMIT_SHA:0:7}
+        # Quoted so YAML keeps it a string: an all-digit short SHA with a
+        # leading zero (e.g. 0486484) otherwise parses as a number and is
+        # pushed without the zero, so the deploy PR's tag never matches.
+        - "${CI_COMMIT_SHA:0:7}"
         - latest
       username:
         from_secret: docker_username
